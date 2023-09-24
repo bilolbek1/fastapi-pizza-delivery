@@ -60,6 +60,36 @@ async def order_make(order: OrderModel, Authorize: AuthJWT=Depends()):
 
 
 
+@order_router.get('/list')
+async def order_list(Authorize: AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Yaroqsiz access token")
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    if user.is_staff:
+        orders = session.query(Order).all()
+        for i in orders:
+            response={
+                "id": i.id,
+                "user_id": i.user_id,
+                "quantity": i.quantity,
+                "product_id": i.product_id,
+                "order_status": i.order_status
+            }
+
+            return jsonable_encoder(response)
+
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Bu sahifa faqat super userlar uchun")
+
+
+
 
 
 

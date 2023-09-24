@@ -43,7 +43,7 @@ class OrderModel(BaseModel):
     product_id: Optional[int]
 
     class Config:
-        orm_model = True
+        orm_mode = True
         arbitrary_types_allowed = {
             "example": {
                 "quantity": 2
@@ -56,8 +56,8 @@ class OrderStatusModel(BaseModel):
     order_status: Optional[str] = 'PENDING'
 
     class Config:
-        orm_mode=True
-        schema_extra={
+        orm_mode = True
+        schema_extra = {
             'example': {
                 "order_status": "PENDING"
             }
