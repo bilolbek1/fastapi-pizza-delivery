@@ -23,7 +23,7 @@ async def hello(Authorize: AuthJWT=Depends()):
     try:
         Authorize.jwt_required()
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Yaroqli access token kiritilmadi")
 
     return {"message": "Bu orders sahifasi"}
@@ -36,7 +36,7 @@ async def order_make(order: OrderModel, Authorize: AuthJWT=Depends()):
     try:
         Authorize.jwt_required()
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Yaroqsiz access token")
 
     current_user = Authorize.get_jwt_subject()
@@ -51,11 +51,19 @@ async def order_make(order: OrderModel, Authorize: AuthJWT=Depends()):
     session.commit()
 
     data = {
-        'success': True,
-        'message': "Buyurtma yaratildi."
+        "id":new_order.id,
+        "user_id": new_order.user_id,
+        "quantity": new_order.quantity,
+        "order_status": new_order.order_status
     }
 
-    return jsonable_encoder(data)
+    response = {
+        "success": True,
+        "message": "Buyurtma yaratildi",
+        "data":data
+    }
+
+    return jsonable_encoder(response)
 
 
 
@@ -65,7 +73,7 @@ async def order_list(Authorize: AuthJWT=Depends()):
     try:
         Authorize.jwt_required()
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Yaroqsiz access token")
 
     current_user = Authorize.get_jwt_subject()
@@ -73,16 +81,17 @@ async def order_list(Authorize: AuthJWT=Depends()):
 
     if user.is_staff:
         orders = session.query(Order).all()
-        for i in orders:
-            response={
+        custom_data = [
+            {
                 "id": i.id,
                 "user_id": i.user_id,
                 "quantity": i.quantity,
-                "product_id": i.product_id,
                 "order_status": i.order_status
             }
+            for i in orders
+        ]
 
-            return jsonable_encoder(response)
+        return jsonable_encoder(custom_data)
 
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
@@ -91,6 +100,24 @@ async def order_list(Authorize: AuthJWT=Depends()):
 
 
 
+@order_router.get('/detail/{id}')
+async def order_detail(id:int, Authorize:AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Yaroqsiz access token")
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    if user.is_staff:
+        order = session.query(Order).filter(Order.id==id).first()
+
+        return jsonable_encoder(order)
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Bu sahifa faqat super userlar uchun")
 
 
 

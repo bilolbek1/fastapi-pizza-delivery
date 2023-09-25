@@ -37,9 +37,8 @@ class Order(Base):
     order_status = Column(ChoiceType(choices=ORDER_STATUS), default='PENDING')
     user_id = Column(Integer, ForeignKey('user.id'))
     user = relationship('User', back_populates='order')
-    product_id = Column(Integer, ForeignKey('product.id'))
-    product = relationship('Product', back_populates='order')
-
+    # product_id = Column(Integer, ForeignKey('product.id'))
+    # product = relationship('Product', back_populates='order')
 
     def __repr__(self):
         return f"<Order {self.order_status}"
@@ -51,7 +50,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(200))
     price = Column(Integer)
-    order = relationship('Order', back_populates='product')
+    # order = relationship('Order', back_populates='product')
 
 
     def __repr__(self):
