@@ -86,7 +86,7 @@ async def order_list(Authorize: AuthJWT=Depends()):
                 "id": i.id,
                 "user_id": i.user_id,
                 "quantity": i.quantity,
-                "order_status": i.order_status
+                "order_status": i.order_status.value
             }
             for i in orders
         ]
@@ -122,6 +122,53 @@ async def order_detail(id:int, Authorize:AuthJWT=Depends()):
 
 
 
+@order_router.get('/user/orders')
+async def user_s_order(Authorize: AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Yaroqsiz access token")
+
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    user_order = [
+        {
+            "id": i.id,
+            "user_id": i.user_id,
+            "quantity": i.quantity,
+            "order_status": i.order_status.value
+        }
+        for i in user.order
+    ]
+
+    return jsonable_encoder(user.order)
+
+
+
+
+@order_router.get("/user/orders/{id}")
+async def user_s_order_id(id:int, Authorize: AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Yaroqsiz access token")
+
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    order = user.order
+
+    for i in order:
+        if i.id==id:
+            return jsonable_encoder(i)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Bunday buyurtmangiz yo'q")
 
 
 
