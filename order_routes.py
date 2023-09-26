@@ -24,9 +24,9 @@ async def hello(Authorize: AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqli access token kiritilmadi")
+                            detail="Invalid token")
 
-    return {"message": "Bu orders sahifasi"}
+    return {"message": "It is orders page"}
 
 
 
@@ -37,7 +37,7 @@ async def order_make(order: OrderModel, Authorize: AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz access token")
+                            detail="Invalid token")
 
     current_user = Authorize.get_jwt_subject()
     user = session.query(User).filter(User.username == current_user).first()
@@ -54,12 +54,13 @@ async def order_make(order: OrderModel, Authorize: AuthJWT=Depends()):
         "id":new_order.id,
         "user_id": new_order.user_id,
         "quantity": new_order.quantity,
-        "order_status": new_order.order_status
+        "order_status": new_order.order_status,
+        "pizza_size": new_order.pizza_size
     }
 
     response = {
         "success": True,
-        "message": "Buyurtma yaratildi",
+        "message": "Order has been created",
         "data":data
     }
 
@@ -74,7 +75,7 @@ async def order_list(Authorize: AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz access token")
+                            detail="Invalid token")
 
     current_user = Authorize.get_jwt_subject()
     user = session.query(User).filter(User.username == current_user).first()
@@ -86,7 +87,8 @@ async def order_list(Authorize: AuthJWT=Depends()):
                 "id": i.id,
                 "user_id": i.user_id,
                 "quantity": i.quantity,
-                "order_status": i.order_status.value
+                "order_status": i.order_status,
+                "pizza_size": i.pizza_size
             }
             for i in orders
         ]
@@ -95,7 +97,7 @@ async def order_list(Authorize: AuthJWT=Depends()):
 
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Bu sahifa faqat super userlar uchun")
+                            detail="User not allowed to carry out request")
 
 
 
@@ -106,7 +108,7 @@ async def order_detail(id:int, Authorize:AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz access token")
+                            detail="Invalid token")
 
     current_user = Authorize.get_jwt_subject()
     user = session.query(User).filter(User.username == current_user).first()
@@ -117,7 +119,7 @@ async def order_detail(id:int, Authorize:AuthJWT=Depends()):
         return jsonable_encoder(order)
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Bu sahifa faqat super userlar uchun")
+                        detail="User not allowed to carry out request")
 
 
 
@@ -128,21 +130,12 @@ async def user_s_order(Authorize: AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz access token")
+                            detail="Invalid token")
 
 
     current_user = Authorize.get_jwt_subject()
     user = session.query(User).filter(User.username == current_user).first()
 
-    user_order = [
-        {
-            "id": i.id,
-            "user_id": i.user_id,
-            "quantity": i.quantity,
-            "order_status": i.order_status.value
-        }
-        for i in user.order
-    ]
 
     return jsonable_encoder(user.order)
 
@@ -155,7 +148,7 @@ async def user_s_order_id(id:int, Authorize: AuthJWT=Depends()):
         Authorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz access token")
+                            detail="Invalid token")
 
 
     current_user = Authorize.get_jwt_subject()
@@ -168,16 +161,69 @@ async def user_s_order_id(id:int, Authorize: AuthJWT=Depends()):
             return jsonable_encoder(i)
 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Bunday buyurtmangiz yo'q")
+                        detail="This order i none")
 
 
 
 
+@order_router.put('/update/{id}')
+async def user_order_update(id:int, order:OrderModel, Authorize: AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token")
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    update_order = session.query(Order).filter(Order.id == id).first()
+
+    if update_order.user == user:
+        update_order.quantity = order.quantity
+        update_order.order_status = order.order_status
+        update_order.pizza_size = order.pizza_size
+
+        session.commit()
+
+        data = {
+            "id": order.id,
+            "quantity": order.quantity,
+            "user_id": order.user_id,
+            "order_status": order.order_status,
+            "pizza_size": order.pizza_size
+        }
+
+        return jsonable_encoder(data)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail="It is not your order")
 
 
 
 
+@order_router.delete('/delete/{id}')
+async def user_order_delete(id:int, Authorize:AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token")
 
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    delete_order = session.query(Order).filter(Order.id == id).first()
+
+    if delete_order.user == user:
+        session.delete(delete_order)
+
+        session.commit()
+
+        return jsonable_encoder(delete_order)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                        detail="It is not your order")
 
 
 

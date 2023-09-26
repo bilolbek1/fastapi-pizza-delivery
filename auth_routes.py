@@ -28,7 +28,7 @@ async def hello(Auyhorize: AuthJWT=Depends()):
         Auyhorize.jwt_required()
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail='Yaroqsiz token')
+                            detail='Invalid token')
     return {'messgae': "Hello this is auth routes page"}
 
 
@@ -39,13 +39,13 @@ async def signup(user: SignUpModel):
 
     if db_email is not None:
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                             detail="Bu email bilan ro'yxatdan o'tib bo'lingan")
+                             detail="User with the email already exists")
 
     db_username = session.query(User).filter(User.username == user.username).first()
 
     if db_username is not None:
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                             detail="Bu username bilan ro'yxatdan ot'ib bo'lingan")
+                             detail="User with the username already exists")
 
     new_user = User(
         username=user.username,
@@ -74,7 +74,7 @@ async def signup(user: SignUpModel):
     response={
         "success": True,
         "status": status.HTTP_200_OK,
-        "message": "Siz muvaffaqiyatli ro'yxatdan o'tdingiz",
+        "message": "you have successfully registered",
         "data": data
     }
     return response
@@ -112,14 +112,14 @@ async def login(user: LoginModel, Authorize: AuthJWT=Depends()):
         response = {
             "success": True,
             "status": status.HTTP_200_OK,
-            "message": "Muvaffaqiyatli login qildingiz",
+            "message": "you have successfully logged in",
             "token": token
         }
 
         return jsonable_encoder(response)
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Yaroqsiz ma'lumot kiritildi")
+                        detail="Invalid username or password")
 
 
 
@@ -135,7 +135,7 @@ async def refresh(Authorize: AuthJWT = Depends()):
 
         if db_user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Bunday user topilmadi")
+                                detail="This user not found")
 
         access_limit_time = datetime.timedelta(minutes=60)
         new_access_token = Authorize.create_access_token(subject=db_user.username,
@@ -144,7 +144,7 @@ async def refresh(Authorize: AuthJWT = Depends()):
         response = {
             "success": True,
             "status": 200,
-            "message": "Yangi tokenni olishingiz mumkin",
+            "message": "Get new access token",
             "token": new_access_token
         }
 
@@ -152,7 +152,7 @@ async def refresh(Authorize: AuthJWT = Depends()):
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Yaroqsiz refresh token")
+                            detail="Invalid refresh token")
 
 
 
