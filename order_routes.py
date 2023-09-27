@@ -181,7 +181,6 @@ async def user_order_update(id:int, order:OrderModel, Authorize: AuthJWT=Depends
 
     if update_order.user == user:
         update_order.quantity = order.quantity
-        update_order.order_status = order.order_status
         update_order.pizza_size = order.pizza_size
 
         session.commit()
@@ -227,6 +226,33 @@ async def user_order_delete(id:int, Authorize:AuthJWT=Depends()):
 
 
 
+@order_router.patch('/user-status/update/{id}')
+async def user_status_update(id: int, order_statuses:OrderStatusModel, Authorize: AuthJWT=Depends()):
+    try:
+        Authorize.jwt_required()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token")
+
+    current_user = Authorize.get_jwt_subject()
+    user = session.query(User).filter(User.username == current_user).first()
+
+    if user.is_staff:
+        update_order_status = session.query(Order).filter(Order.id==id).first()
+        update_order_status.order_status = order_statuses.order_status
+
+        session.commit()
+
+        data = {
+            "success": True,
+            "status": 200,
+            "message": "Successfully updated order status"
+        }
+
+        return jsonable_encoder(data)
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User not allowed to carry out request")
 
 
 
